@@ -3,14 +3,14 @@ use std::error::Error;
 use std::fs;
 use std::io;
 
+
 fn read_file(p: &str) -> io::Result<String> {
     let contents = fs::read_to_string(p);
-    // println!("Read text:\n{}",contents);
     return contents;
 }
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let contents = read_file(config.filename)?;
+    let contents = read_file(config.filename.as_str())?;
     /*
     match contents {
         Ok(data) =>{  println!("contents:\n{}", data); Ok(())}
@@ -18,31 +18,38 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     }
     */
     let results = if config.case_sensitive {
-        search(config.query, &contents)
+        search(config.query.as_str(), &contents)
     } else {
-        search_case_insensitive(config.query, &contents)
+        search_case_insensitive(config.query.as_str(), &contents)
     };
     println!("{:?}", results);
     Ok(())
 }
-pub struct Config<'a> {
-    query: &'a str,
-    filename: &'a str,
+pub struct Config {
+    query: String,
+    filename: String,
     case_sensitive: bool,
 }
 
-impl<'a> Config<'a> {
-    pub fn new(args: &'a [String]) -> Result<Self, &'static str> {
-        if args.len() != 2 {
-            return Err(stringify!(
-                "expected 2 args, got {} args: {:?} ",
-                args.len(),
-                args
-            ));
-        }
+impl Config {
+    pub fn new<T>(args: T) -> Result<Self, &'static str>
+    where
+        T: Iterator<Item = String>,
+    {
+        let mut positional = args.skip(1); // ignore the program name
+
+        let query = match positional.next() {
+            Some(val) => val,
+            None => return Err("no query provided."),
+        };
+        let filename = match positional.next() {
+            Some(val) => val,
+            None => return Err("no filename provided."),
+        };
+
         Ok(Config {
-            query: &args[0],
-            filename: &args[1],
+            query: query,
+            filename: filename,
             case_sensitive: env::var("MINIGREP_CASE_INSENSITIVE").is_err(),
         })
     }
@@ -97,10 +104,10 @@ mod tests {
 
     #[test]
     fn test_config() {
-        let args = vec![String::from("one"), String::from("two")];
-        let c = Config::new(&args).unwrap();
-        assert_eq!(c.query, args[0]);
-        assert_eq!(c.filename, args[1]);
+        let args = vec!["ignore me", "one","two"];
+        let c = Config::new(args.iter().map(|s| s.to_string())).unwrap();
+        assert_eq!(c.query, args[1]);
+        assert_eq!(c.filename, args[2]);
     }
 
     #[test]
