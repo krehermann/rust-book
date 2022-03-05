@@ -55,6 +55,20 @@ impl Config {
     }
 }
 
+/// Search contents with query
+/// 
+/// # Examples
+/// ```
+/// use minigrep::search;
+/// let query = "my name is what";
+/// let content="\
+/// my name is what
+/// my name is who
+/// my name chicha chica
+/// slim shady";
+/// let results =  search(query,content);
+/// assert_eq!(vec!["my name is what"],results);
+/// ```
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     /* v1
     let mut lines = contents
