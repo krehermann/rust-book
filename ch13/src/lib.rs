@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::ops::Deref;
 use std::thread;
 use std::time::Duration;
@@ -14,44 +15,49 @@ fn simulated_expensive_calc(intensity: u32) -> u32 {
 }
 
 fn generate_workout(intensity: u32,random_number:u32) {
-    let expensive_closure = |intensity| {
-        simulated_expensive_calc(intensity)
-    };
+
+    let mut expensive_result = Cacher::new(|num| {
+        println!("calculating slowly...");
+        thread::sleep(Duration::from_secs(2));
+        intensity
+    });
+
     if intensity < 25 {
-        let expensive_result = expensive_closure(intensity);
-        println!("Do {} pushups", expensive_result);
-        println!("And now {} situps", expensive_result);
+        
+        println!("Do {} pushups", expensive_result.value(intensity));
+        println!("And now {} situps", expensive_result.value(intensity));
     } else {
         if random_number == 3 {
             println!("Rest day");
         } else {
-            println!("Run for {} minutes", expensive_closure(intensity))
+            println!("Run for {} minutes", expensive_result.value(intensity))
         }
 
     }
 }
 
 /// Cacher is struct that wraps a closure and caches the evaluation
-struct Cacher<T,U>
-where T: Fn(U) -> U,
+struct Cacher<T,U,V>
+where T: Fn(U) -> V,
 {
     calculation:T,
-    value:Option<U>,
+    value:Option<V>,
+    phantom: PhantomData<U>,
 }
 
 
-impl<T,U:Copy> Cacher<T,U> where T:Fn(U)->U {
-    fn new(calculation:T) ->Cacher<T,U> {
-        Cacher { calculation: calculation, value: None }
+impl<T,U,V:Clone> Cacher<T,U,V> where T:Fn(U)->V {
+    fn new(calculation:T) ->Cacher<T,U,V> {
+        Cacher { calculation: calculation, value: None, phantom:PhantomData }
     }
 
-    fn value(&mut self, arg: U) -> U {
-        match self.value{
+    fn value(&mut self, arg: U) -> V {
+        match &self.value{
             // cache first result forevs
-            Some(v) => v,
+            Some(v) => v.clone(),
             None => {
                 let v = (self.calculation)(arg);
-                self.value = Some(v);
+                self.value = Some(v.clone());
                 v
             }
         }
