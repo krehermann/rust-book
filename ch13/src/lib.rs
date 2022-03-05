@@ -63,6 +63,9 @@ impl<T,U,V:Clone> Cacher<T,U,V> where T:Fn(U)->V {
         }
     }
 }
+
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,5 +78,14 @@ mod tests {
         let mut c = Cacher::new(closure);
         let v = c.value(4);
         assert_eq!(v, 8);
+
+        let yell = |s: &str| {
+            s.to_uppercase()
+           
+        };
+
+        let mut z = Cacher::new(yell);
+        let k = z.value("hi");
+        assert_eq!(k.as_str(), "HI");
     }
 }
